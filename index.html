@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกเวลา</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="card">
+            <div class="header">
+                <h1><i class="fas fa-clock"></i> ระบบบันทึกเวลา</h1>
+                <p>กรุณาเข้าสู่ระบบด้วยรหัสพนักงาน</p>
+            </div>
+            
+            <div id="loginAlert"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="employeeId">รหัสพนักงาน</label>
+                    <input type="text" id="employeeId" class="form-control" placeholder="กรอกรหัสพนักงาน" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    <i class="fas fa-sign-in-alt"></i>
+                    เข้าสู่ระบบ
+                </button>
+            </form>
+        </div>
+
+        <!-- Main App Screen -->
+        <div id="mainScreen" class="hidden">
+            <div class="user-info">
+                <span><i class="fas fa-user"></i> <span id="userName">-</span></span>
+                <button id="logoutBtn" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+                </button>
+            </div>
+
+            <!-- Holiday Indicator -->
+            <div id="holidayIndicator" class="holiday-indicator hidden">
+                <i class="fas fa-calendar-day"></i>
+                <span id="holidayText">วันหยุด</span>
+            </div>
+
+            <!-- Location Card -->
+            <div class="location-card">
+                <div class="location-header">
+                    <i class="fas fa-map-marker-alt"></i>
+                    ตำแหน่งปัจจุบัน
+                </div>
+                <div class="location-details">
+                    <div id="locationStatus">กำลังตรวจสอบตำแหน่ง...</div>
+                    <div id="locationCoordinates" class="coordinates hidden"></div>
+                    <div id="locationAccuracy" class="hidden"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="time-display">
+                    <div class="current-time" id="currentTime">--:--:--</div>
+                    <div class="current-date" id="currentDate">-</div>
+                </div>
+
+                <div class="status-display">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">ยังไม่ได้ลงเวลา</span>
+                </div>
+
+                <div class="actions-grid">
+                    <button class="action-btn" id="checkInBtn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>ลงเวลาเข้างาน</span>
+                    </button>
+                    
+                    <button class="action-btn" id="checkOutBtn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>ลงเวลาออกงาน</span>
+                    </button>
+                    
+                    <button class="action-btn" id="otRequestBtn">
+                        <i class="fas fa-clock"></i>
+                        <span>ขอทำโอที</span>
+                    </button>
+                    
+                    <button class="action-btn" id="leaveRequestBtn">
+                        <i class="fas fa-calendar-times"></i>
+                        <span>ขอลา</span>
+                    </button>
+                </div>
+
+                <div id="mainAlert"></div>
+            </div>
+
+            <!-- Company Holidays Section -->
+            <div class="card">
+                <div class="header">
+                    <h2><i class="fas fa-calendar-alt"></i> วันหยุดบริษัท</h2>
+                    <p>ข้อมูลวันหยุดประจำปี</p>
+                </div>
+                
+                <div id="holidaysLoading" class="loading">
+                    <div class="spinner"></div>
+                    กำลังโหลดข้อมูลวันหยุด...
+                </div>
+                
+                <div id="holidaysFilter" class="holidays-filter hidden">
+                    <button class="filter-btn active" data-filter="all">ทั้งหมด</button>
+                    <button class="filter-btn" data-filter="upcoming">กำลังจะมาถึง</button>
+                    <button class="filter-btn" data-filter="current">วันนี้</button>
+                    <button class="filter-btn" data-filter="past">ผ่านไปแล้ว</button>
+                </div>
+                
+                <div id="holidaysList" class="holidays-list hidden"></div>
+                
+                <div id="holidaysError" class="alert alert-danger hidden">
+                    ไม่สามารถโหลดข้อมูลวันหยุดได้
+                </div>
+            </div>
+        </div>
+
+        <!-- OT Request Modal -->
+        <div id="otModal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="closeOtModal">&times;</span>
+                <h2>ขอทำโอที</h2>
+                <form id="otForm">
+                    <div class="form-group">
+                        <label for="otDate">วันที่</label>
+                        <input type="date" id="otDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="otTime">เวลา</label>
+                        <input type="time" id="otTime" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="otReason">เหตุผล</label>
+                        <textarea id="otReason" class="form-control" rows="3" placeholder="กรอกเหตุผลในการขอทำโอที" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-warning btn-full">
+                        <i class="fas fa-paper-plane"></i>
+                        ส่งคำขอ
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Leave Request Modal -->
+        <div id="leaveModal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="closeLeaveModal">&times;</span>
+                <h2>📝 แบบฟอร์มขอลา</h2>
+                <form id="leaveForm">
+                    <div class="form-group">
+                        <label for="leaveType">
+                            ประเภทการลา<span class="required">*</span>
+                        </label>
+                        <select id="leaveType" class="form-control" required>
+                            <option value="">เลือกประเภทการลา</option>
+                            <option value="ลาป่วย">ลาป่วย</option>
+                            <option value="ลากิจ">ลากิจ</option>
+                            <option value="ลาพักร้อน">ลาพักร้อน</option>
+                            <option value="ลาคลอด">ลาคลอด</option>
+                            <option value="อื่นๆ">อื่นๆ</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            วันที่ลา<span class="required">*</span>
+                        </label>
+                        <div class="date-group">
+                            <div>
+                                <input type="date" id="leaveStartDate" class="form-control" required>
+                                <small class="info-text">วันเริ่มต้น</small>
+                            </div>
+                            <div>
+                                <input type="date" id="leaveEndDate" class="form-control" required>
+                                <small class="info-text">วันสิ้นสุด</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="certificateGroup" style="display: none;">
+                        <label for="medicalCertificate">
+                            แนบใบรับรองแพทย์
+                        </label>
+                        <div class="file-upload-wrapper">
+                            <label for="medicalCertificate" class="file-upload-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                เลือกไฟล์ใบรับรองแพทย์
+                            </label>
+                            <input type="file" id="medicalCertificate" accept=".pdf,.jpg,.jpeg,.png" />
+                            <div id="fileName" class="file-name"></div>
+                        </div>
+                        <small class="info-text">รองรับไฟล์: PDF, JPG, PNG (ขนาดไม่เกิน 5MB)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="leaveReason">
+                            เหตุผลในการลา<span class="required">*</span>
+                        </label>
+                        <textarea id="leaveReason" class="form-control" rows="4" placeholder="กรุณาระบุเหตุผลในการลา..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-info btn-full">
+                        <i class="fas fa-paper-plane"></i>
+                        ส่งคำขอลา
+                    </button>
+
+                    <div id="successMessage" class="success-message">
+                        <i class="fas fa-check-circle"></i>
+                        ส่งคำขอลาเรียบร้อยแล้ว!
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Swift Alert Container -->
+    <div id="swiftAlertContainer"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
