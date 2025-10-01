@@ -3,347 +3,800 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบันทึกเวลา (เชื่อมต่อ Google Sheet)</title>
+    <title>ระบบบันทึกเวลา</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <style>
-        :root {
-            --primary-blue: #007aff; --light-blue: #f0f7ff; --dark-blue: #003c7a;
-            --background-color: #f8f9fa; --card-background: #ffffff; --text-color: #333;
-            --text-light: #888; --border-color: #e0e0e0; --success-color: #34c759;
-            --warning-color: #ff9500; --danger-color: #ff3b30;
-            --shadow: 0 4px 15px rgba(0, 122, 255, 0.08); --border-radius: 12px;
+        body {
+            box-sizing: border-box;
         }
+        
+        :root {
+            --primary-blue: #007aff;
+            --light-blue: #f0f7ff;
+            --dark-blue: #003c7a;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-color: #333;
+            --text-light: #888;
+            --border-color: #e0e0e0;
+            --success-color: #34c759;
+            --warning-color: #ff9500;
+            --danger-color: #ff3b30;
+            --info-color: #5ac8fa;
+            --shadow: 0 4px 15px rgba(0, 122, 255, 0.08);
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--background-color); color: var(--text-color);
-            margin: 0; padding: 20px; display: flex; justify-content: center;
-            align-items: center; min-height: 100vh;
+            background: linear-gradient(135deg, var(--light-blue) 0%, #e3f2fd 100%);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .container { width: 100%; max-width: 480px; }
-        .loader { text-align: center; padding: 2rem; font-weight: 500; }
-        .header { margin-bottom: 1.5rem; padding: 0 10px; }
-        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .header h1 { font-size: 1.5rem; font-weight: 700; color: var(--dark-blue); margin: 0; }
-        .time-display { text-align: right; }
-        .time-display div:first-child { font-size: 1.25rem; font-weight: 500; }
-        .time-display div:last-child { font-size: 0.8rem; color: var(--text-light); }
-        .user-info { display: flex; justify-content: space-between; align-items: center; background-color: #fff; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .user-info span { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
-        .user-info i { color: var(--primary-blue); }
-        .card { background-color: var(--card-background); border-radius: var(--border-radius); padding: 2rem; box-shadow: var(--shadow); border: 1px solid var(--border-color); }
-        .status-display { display: flex; align-items: center; justify-content: center; background-color: var(--light-blue); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 2rem; font-weight: 500; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: var(--warning-color); margin-right: 10px; transition: background-color 0.3s ease; }
-        .status-dot.checked-in { background-color: var(--success-color); }
-        .actions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem; }
-        .action-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.25rem 0.5rem; background-color: var(--card-background); border: 1px solid var(--border-color); border-radius: 10px; font-family: inherit; font-size: 0.9rem; font-weight: 500; color: var(--primary-blue); cursor: pointer; transition: all 0.2s ease; }
-        .action-btn i { width: 24px; height: 24px; margin-bottom: 8px; }
-        .action-btn:hover { background-color: var(--primary-blue); color: white; transform: translateY(-3px); }
-        .action-btn:active { transform: translateY(0); }
-        .action-btn:disabled { opacity: 0.6; cursor: not-allowed; background-color: #f5f5f5; }
-        .history-log { border-top: 1px solid var(--border-color); padding-top: 1.5rem; }
-        .history-log h3 { margin: 0 0 1rem 0; font-size: 1rem; font-weight: 700; text-align: center; color: var(--dark-blue); }
-        #history-records .placeholder { text-align: center; color: var(--text-light); }
-        #history-records p { background-color: #f9f9f9; padding: 10px; border-radius: 6px; margin-bottom: 8px; text-align: center; font-size: 0.95rem; }
-        #history-records .work-hours { font-weight: bold; color: var(--primary-blue); }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; z-index: 1000; }
-        .modal-overlay.visible { opacity: 1; visibility: visible; }
-        .modal-content { background: white; padding: 2rem; border-radius: var(--border-radius); width: 90%; max-width: 450px; transform: scale(0.95); transition: transform 0.3s ease; max-height: 80vh; overflow-y: auto; }
-        .modal-overlay.visible .modal-content { transform: scale(1); }
-        .modal-content h2 { margin-top: 0; color: var(--dark-blue); }
-        .modal-content ul { padding-left: 20px; list-style-type: '✔ '; }
-        .modal-content li { margin-bottom: 10px; }
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; box-sizing: border-box; }
-        .form-group textarea { resize: vertical; min-height: 80px; }
-        .file-input-wrapper { display: none; }
-        .file-input-wrapper.visible { display: block; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem; }
-        .modal-btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 1rem; transition: background-color 0.2s ease; }
-        .btn-primary { background-color: var(--primary-blue); color: white; }
-        .btn-primary:hover { background-color: var(--dark-blue); }
-        .btn-secondary { background-color: #e5e5e5; color: #333; }
-        .btn-secondary:hover { background-color: #d5d5d5; }
-        #alert-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
-        .swift-alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 10px; color: white; font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.1); opacity: 0; transform: translateX(100%); animation: slideIn 0.5s forwards; }
-        .swift-alert.success { background-color: var(--success-color); }
-        .swift-alert.error { background-color: var(--danger-color); }
-        .swift-alert.closing { animation: slideOut 0.5s forwards; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes slideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
-        #login-view h2 { text-align: center; color: var(--dark-blue); margin-bottom: 2rem; }
-        #login-form .form-group { margin-bottom: 1.5rem; }
-        #login-form input { padding: 12px; font-size: 1rem; }
-        #login-form button { width: 100%; padding: 12px; font-size: 1.1rem; }
-        .logout-btn { background: none; border: none; color: var(--danger-color); cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; padding: 0; }
-        @media (max-width: 480px) { body { padding: 10px; align-items: flex-start; } .card { padding: 1.5rem; } }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: var(--card-background);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark-blue);
+            margin: 0 0 0.5rem 0;
+        }
+
+        .header p {
+            color: var(--text-light);
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--dark-blue);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #28a745;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc3545;
+        }
+
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #e68900;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--light-blue);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .time-display {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .current-time {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .current-date {
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .status-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--light-blue);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--warning-color);
+            margin-right: 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        .status-dot.checked-in {
+            background-color: var(--success-color);
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem 1rem;
+            background-color: white;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: var(--text-color);
+        }
+
+        .action-btn:hover {
+            border-color: var(--primary-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
+        }
+
+        .action-btn i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary-blue);
+        }
+
+        .location-display {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-align: center;
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-blue);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        .close:hover {
+            color: var(--text-color);
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 10px;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+            
+            .actions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Login View -->
-        <div id="login-view">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="card">
+            <div class="header">
+                <h1><i class="fas fa-clock"></i> ระบบบันทึกเวลา</h1>
+                <p>กรุณาเข้าสู่ระบบด้วยรหัสพนักงาน</p>
+            </div>
+            
+            <div id="loginAlert"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="employeeId">รหัสพนักงาน</label>
+                    <input type="text" id="employeeId" class="form-control" placeholder="กรอกรหัสพนักงาน" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    <i class="fas fa-sign-in-alt"></i>
+                    เข้าสู่ระบบ
+                </button>
+            </form>
+        </div>
+
+        <!-- Main App Screen -->
+        <div id="mainScreen" class="hidden">
+            <div class="user-info">
+                <span><i class="fas fa-user"></i> <span id="userName">-</span></span>
+                <button id="logoutBtn" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+                </button>
+            </div>
+
+            <div class="location-display">
+                <i class="fas fa-map-marker-alt"></i>
+                <span id="locationText">กำลังตรวจสอบตำแหน่ง...</span>
+            </div>
+
             <div class="card">
-                <h2>เข้าสู่ระบบ</h2>
-                <form id="login-form">
+                <div class="time-display">
+                    <div class="current-time" id="currentTime">--:--:--</div>
+                    <div class="current-date" id="currentDate">-</div>
+                </div>
+
+                <div class="status-display">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">ยังไม่ได้ลงเวลา</span>
+                </div>
+
+                <div class="actions-grid">
+                    <button class="action-btn" id="checkInBtn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>ลงเวลาเข้างาน</span>
+                    </button>
+                    
+                    <button class="action-btn" id="checkOutBtn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>ลงเวลาออกงาน</span>
+                    </button>
+                    
+                    <button class="action-btn" id="otRequestBtn">
+                        <i class="fas fa-clock"></i>
+                        <span>ขอทำโอที</span>
+                    </button>
+                    
+                    <button class="action-btn" id="leaveRequestBtn">
+                        <i class="fas fa-calendar-times"></i>
+                        <span>ขอลา</span>
+                    </button>
+                </div>
+
+                <div id="mainAlert"></div>
+            </div>
+        </div>
+
+        <!-- OT Request Modal -->
+        <div id="otModal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="closeOtModal">&times;</span>
+                <h2>ขอทำโอที</h2>
+                <form id="otForm">
                     <div class="form-group">
-                        <label for="employee-id">รหัสพนักงาน</label>
-                        <input type="text" id="employee-id" placeholder="เช่น EMP001" required>
+                        <label for="otDate">วันที่</label>
+                        <input type="date" id="otDate" class="form-control" required>
                     </div>
-                    <button type="submit" class="modal-btn btn-primary">เข้าสู่ระบบ</button>
+                    <div class="form-group">
+                        <label for="otTime">เวลา</label>
+                        <input type="time" id="otTime" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="otReason">เหตุผล</label>
+                        <textarea id="otReason" class="form-control" rows="3" placeholder="กรอกเหตุผลในการขอทำโอที" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-warning btn-full">
+                        <i class="fas fa-paper-plane"></i>
+                        ส่งคำขอ
+                    </button>
                 </form>
             </div>
         </div>
 
-        <!-- App View -->
-        <div id="app-view" style="display: none;">
-            <header class="header">
-                <div class="header-top">
-                    <h1>บันทึกเวลาทำงาน</h1>
-                    <div class="time-display">
-                        <div id="current-time">00:00:00</div>
-                        <div id="current-date">1 มกราคม 2568</div>
+        <!-- Leave Request Modal -->
+        <div id="leaveModal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="closeLeaveModal">&times;</span>
+                <h2>ขอลา</h2>
+                <form id="leaveForm">
+                    <div class="form-group">
+                        <label for="leaveType">ประเภทการลา</label>
+                        <select id="leaveType" class="form-control" required>
+                            <option value="">เลือกประเภทการลา</option>
+                            <option value="ลาป่วย">ลาป่วย</option>
+                            <option value="ลากิจ">ลากิจ</option>
+                            <option value="ลาพักร้อน">ลาพักร้อน</option>
+                            <option value="ลาคลอด">ลาคลอด</option>
+                            <option value="อื่นๆ">อื่นๆ</option>
+                        </select>
                     </div>
-                </div>
-                <div class="user-info">
-                    <span id="employee-name"><i data-lucide="user"></i></span>
-                    <button id="logout-btn" class="logout-btn"><i data-lucide="log-out"></i> ออก</button>
-                </div>
-            </header>
-            <main class="card">
-                <div id="loader" class="loader">
-                    <i data-lucide="loader-2" class="lucide-spin"></i>
-                    <p>กำลังโหลดข้อมูล...</p>
-                </div>
-                <div id="app-content" style="display: none;">
-                    <div class="status-display">
-                        <span class="status-dot"></span>
-                        <span id="status-text"></span>
+                    <div class="form-group">
+                        <label for="leaveDate">วันที่ลา</label>
+                        <input type="date" id="leaveDate" class="form-control" required>
                     </div>
-                    <div class="actions-grid">
-                        <button id="checkin-btn" class="action-btn"><i data-lucide="log-in"></i><span id="checkin-btn-text"></span></button>
-                        <button id="ot-btn" class="action-btn"><i data-lucide="clock-3"></i><span>ขอทำโอที</span></button>
-                        <button id="leave-btn" class="action-btn"><i data-lucide="file-text"></i><span>ขอลา</span></button>
-                        <button id="holiday-btn" class="action-btn"><i data-lucide="calendar-days"></i><span>วันหยุดบริษัท</span></button>
+                    <div class="form-group">
+                        <label for="leaveReason">เหตุผล</label>
+                        <textarea id="leaveReason" class="form-control" rows="3" placeholder="กรอกเหตุผลในการลา" required></textarea>
                     </div>
-                    <div class="history-log">
-                        <h3>ประวัติลงเวลาวันนี้</h3>
-                        <div id="history-records"></div>
-                    </div>
-                </div>
-            </main>
+                    <button type="submit" class="btn btn-info btn-full">
+                        <i class="fas fa-paper-plane"></i>
+                        ส่งคำขอ
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
-    <!-- Modal and Alert Containers -->
-    <div id="modal-overlay" class="modal-overlay"><div class="modal-content"><h2 id="modal-title"></h2><div id="modal-body"></div><div id="modal-actions" class="modal-actions"></div></div></div>
-    <div id="alert-container"></div>
-
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwqIwrmo4Tee5a6TRruor0hC1ixm80btrFY_lGnak5vUUDXGFwEaqNTxNDeYNuR9p244w/exec';
+        // Configuration
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoxqzJhNUd6F5miX1Zq5PjO5sJSyGdmngmAklYdqd1FR395j0tQ4-oA_stX_r8doTyOg/exec';
+        
+        // Global variables
         let currentUser = null;
-        let appState = { isCheckedIn: false, checkInTime: null, checkOutTime: null, isSubmitting: false };
+        let userLocation = null;
+        let checkInStatus = false;
 
-        const elements = {
-            time: document.getElementById('current-time'), date: document.getElementById('current-date'),
-            loginView: document.getElementById('login-view'), appView: document.getElementById('app-view'),
-            loginForm: document.getElementById('login-form'), employeeIdInput: document.getElementById('employee-id'),
-            employeeName: document.getElementById('employee-name'), statusText: document.getElementById('status-text'),
-            statusDot: document.querySelector('.status-dot'), checkinBtn: document.getElementById('checkin-btn'),
-            checkinBtnText: document.getElementById('checkin-btn-text'), historyRecords: document.getElementById('history-records'),
-            modalOverlay: document.getElementById('modal-overlay'), modalTitle: document.getElementById('modal-title'),
-            modalBody: document.getElementById('modal-body'), modalActions: document.getElementById('modal-actions'),
-            loader: document.getElementById('loader'), appContent: document.getElementById('app-content'),
-            logoutBtn: document.getElementById('logout-btn'),
-        };
+        // DOM elements
+        const loginScreen = document.getElementById('loginScreen');
+        const mainScreen = document.getElementById('mainScreen');
+        const loginForm = document.getElementById('loginForm');
+        const employeeIdInput = document.getElementById('employeeId');
+        const userNameSpan = document.getElementById('userName');
+        const currentTimeSpan = document.getElementById('currentTime');
+        const currentDateSpan = document.getElementById('currentDate');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const locationText = document.getElementById('locationText');
+        const checkInBtn = document.getElementById('checkInBtn');
+        const checkOutBtn = document.getElementById('checkOutBtn');
+        const otRequestBtn = document.getElementById('otRequestBtn');
+        const leaveRequestBtn = document.getElementById('leaveRequestBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const otModal = document.getElementById('otModal');
+        const leaveModal = document.getElementById('leaveModal');
+        const otForm = document.getElementById('otForm');
+        const leaveForm = document.getElementById('leaveForm');
 
-        function updateClock() {
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            getCurrentLocation();
+            
+            // Set default dates
+            document.getElementById('otDate').valueAsDate = new Date();
+            document.getElementById('leaveDate').valueAsDate = new Date();
+        });
+
+        // Update date and time
+        function updateDateTime() {
             const now = new Date();
-            elements.time.textContent = now.toLocaleTimeString('th-TH', { hour12: false });
-            elements.date.textContent = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+            const timeOptions = { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: false 
+            };
+            const dateOptions = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            
+            currentTimeSpan.textContent = now.toLocaleTimeString('th-TH', timeOptions);
+            currentDateSpan.textContent = now.toLocaleDateString('th-TH', dateOptions);
         }
-        
-        async function apiCall(payload) {
-            if (appState.isSubmitting) return;
-            appState.isSubmitting = true;
-            setButtonsDisabled(true);
-            try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST', mode: 'cors', cache: 'no-cache',
-                    headers: { 'Content-Type': 'application/json' }, redirect: 'follow',
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    if (payload.action !== 'login') showAlert('ดำเนินการสำเร็จ');
-                    return result.data;
-                } else { throw new Error(result.message || 'เกิดข้อผิดพลาด'); }
-            } catch (error) {
-                console.error('API Error:', error);
-                showAlert(error.message, 'error');
-                return null;
-            } finally {
-                appState.isSubmitting = false;
-                setButtonsDisabled(false);
+
+        // Get user location
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        userLocation = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        };
+                        locationText.innerHTML = `<i class="fas fa-map-marker-alt"></i> ตำแหน่งปัจจุบัน: ${userLocation.latitude.toFixed(6)}, ${userLocation.longitude.toFixed(6)}`;
+                    },
+                    function(error) {
+                        locationText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ไม่สามารถระบุตำแหน่งได้`;
+                        userLocation = null;
+                    }
+                );
+            } else {
+                locationText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> เบราว์เซอร์ไม่รองรับการระบุตำแหน่ง`;
             }
         }
 
-        async function handleLogin(e) {
+        // Show alert
+        function showAlert(containerId, message, type = 'success') {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        // Login form handler
+        loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            const employeeId = elements.employeeIdInput.value.trim().toUpperCase();
+            
+            const employeeId = employeeIdInput.value.trim();
             if (!employeeId) return;
-            const userData = await apiCall({ action: 'login', employeeId });
-            if (userData) {
-                currentUser = userData;
-                elements.loginView.style.display = 'none';
-                elements.appView.style.display = 'block';
-                elements.employeeName.innerHTML = `<i data-lucide="user"></i> ${currentUser.employeeName}`;
-                await loadInitialData();
-                lucide.createIcons();
-            }
-        }
-        
-        function handleLogout() {
-            currentUser = null;
-            elements.appView.style.display = 'none';
-            elements.loginView.style.display = 'block';
-            elements.employeeIdInput.value = '';
-        }
 
-        async function loadInitialData() {
-            if (SCRIPT_URL === 'YOUR_GOOGLE_SCRIPT_URL_HERE') {
-                showAlert('กรุณาตั้งค่า Google Script URL', 'error');
-                elements.loader.innerHTML = '<p>การตั้งค่าไม่สมบูรณ์</p>';
-                return;
-            }
-            elements.loader.style.display = 'block';
-            elements.appContent.style.display = 'none';
             try {
-                const response = await fetch(`${SCRIPT_URL}?action=getInitialStatus&userName=${currentUser.employeeName}`);
+                showAlert('loginAlert', 'กำลังตรวจสอบข้อมูล...', 'success');
+                
+                const response = await fetch(`${SCRIPT_URL}?action=login&employeeId=${encodeURIComponent(employeeId)}`);
                 const result = await response.json();
-                updateUIFromState( (result.status === 'success' && result.data) ? result.data : { isCheckedIn: false, checkInTime: null, checkOutTime: null });
-            } catch (error) {
-                console.error('Error fetching initial data:', error);
-                showAlert('ไม่สามารถโหลดข้อมูลเริ่มต้นได้', 'error');
-            } finally {
-                elements.loader.style.display = 'none';
-                elements.appContent.style.display = 'block';
-                lucide.createIcons();
-            }
-        }
-
-        async function handleCheckInToggle() {
-            const action = appState.isCheckedIn ? 'checkOut' : 'checkIn';
-            const result = await apiCall({ action, userName: currentUser.employeeName });
-            if (result && result.newStatus) updateUIFromState(result.newStatus);
-        }
-
-        function updateUIFromState(state) {
-            appState = { ...appState, ...state };
-            const iconElement = elements.checkinBtn.firstElementChild;
-            const newIcon = document.createElement('i');
-            if (appState.isCheckedIn) {
-                elements.statusText.textContent = `เข้างานแล้วเวลา ${appState.checkInTime} น.`;
-                elements.statusDot.classList.add('checked-in');
-                elements.checkinBtnText.textContent = 'ลงเวลาออกงาน';
-                newIcon.setAttribute('data-lucide', 'log-out');
-            } else {
-                elements.statusText.textContent = 'ยังไม่ได้ลงเวลาเข้างาน';
-                elements.statusDot.classList.remove('checked-in');
-                elements.checkinBtnText.textContent = 'ลงเวลาเข้างาน';
-                newIcon.setAttribute('data-lucide', 'log-in');
-            }
-            if (iconElement) iconElement.replaceWith(newIcon);
-            updateHistory();
-        }
-
-        function updateHistory() {
-            elements.historyRecords.innerHTML = '';
-            if (appState.checkInTime) {
-                const record = document.createElement('p');
-                let text = `เข้างาน: ${appState.checkInTime} น.`;
-                if (appState.checkOutTime) {
-                    const [startH, startM] = appState.checkInTime.split(':').map(Number);
-                    const [endH, endM] = appState.checkOutTime.split(':').map(Number);
-                    let diff = (endH * 60 + endM) - (startH * 60 + startM);
-                    if (diff < 0) diff += 1440;
-                    const hours = Math.floor(diff / 60);
-                    const minutes = diff % 60;
-                    text += ` | ออกงาน: ${appState.checkOutTime} น. <span class="work-hours">(${hours} ชม. ${minutes} นาที)</span>`;
+                
+                if (result.success) {
+                    currentUser = {
+                        id: employeeId,
+                        name: result.employeeName
+                    };
+                    
+                    userNameSpan.textContent = result.employeeName;
+                    loginScreen.classList.add('hidden');
+                    mainScreen.classList.remove('hidden');
+                    
+                    // Check current status
+                    await checkCurrentStatus();
+                } else {
+                    showAlert('loginAlert', 'ไม่พบรหัสพนักงานในระบบ', 'danger');
                 }
-                record.innerHTML = text;
-                elements.historyRecords.appendChild(record);
+            } catch (error) {
+                showAlert('loginAlert', 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'danger');
+            }
+        });
+
+        // Check current status
+        async function checkCurrentStatus() {
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=checkStatus&employeeId=${encodeURIComponent(currentUser.id)}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    checkInStatus = result.isCheckedIn;
+                    updateStatusDisplay();
+                }
+            } catch (error) {
+                console.error('Error checking status:', error);
+            }
+        }
+
+        // Update status display
+        function updateStatusDisplay() {
+            if (checkInStatus) {
+                statusDot.classList.add('checked-in');
+                statusText.textContent = 'ลงเวลาเข้างานแล้ว';
+                checkInBtn.style.opacity = '0.5';
+                checkInBtn.style.pointerEvents = 'none';
+                checkOutBtn.style.opacity = '1';
+                checkOutBtn.style.pointerEvents = 'auto';
             } else {
-                elements.historyRecords.innerHTML = '<p class="placeholder">ยังไม่มีข้อมูลการลงเวลา</p>';
-            }
-        }
-        
-        function setButtonsDisabled(disabled) { document.querySelectorAll('.action-btn, #login-form button').forEach(btn => btn.disabled = disabled); }
-        function showAlert(message, type = 'success') {
-            const alertContainer = document.getElementById('alert-container');
-            const alert = document.createElement('div');
-            alert.className = `swift-alert ${type}`;
-            alert.textContent = message;
-            alertContainer.appendChild(alert);
-            setTimeout(() => { alert.classList.add('closing'); setTimeout(() => alert.remove(), 500); }, 3000);
-        }
-        function openModal(title, content, actions) {
-            elements.modalTitle.textContent = title;
-            elements.modalBody.innerHTML = content;
-            elements.modalActions.innerHTML = actions;
-            elements.modalOverlay.classList.add('visible');
-            setupModalEventListeners();
-        }
-        function closeModal() { elements.modalOverlay.classList.remove('visible'); }
-        async function setupModalEventListeners() {
-            const closeBtn = document.querySelector('.modal-btn-close');
-            if (closeBtn) closeBtn.addEventListener('click', closeModal);
-            const form = elements.modalBody.querySelector('form');
-            if (form) {
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const payload = Object.fromEntries(new FormData(form));
-                    payload.action = form.dataset.formtype;
-                    payload.userName = currentUser.employeeName;
-                    if (await apiCall(payload)) closeModal();
-                });
-            }
-            const leaveTypeSelect = document.getElementById('leave-type');
-            if (leaveTypeSelect) {
-                leaveTypeSelect.addEventListener('change', (e) => {
-                    document.getElementById('leave-file-wrapper').classList.toggle('visible', e.target.value === 'ลาป่วย');
-                });
+                statusDot.classList.remove('checked-in');
+                statusText.textContent = 'ยังไม่ได้ลงเวลา';
+                checkInBtn.style.opacity = '1';
+                checkInBtn.style.pointerEvents = 'auto';
+                checkOutBtn.style.opacity = '0.5';
+                checkOutBtn.style.pointerEvents = 'none';
             }
         }
 
-        const MODAL_CONTENT = {
-            otForm: `<form data-formtype="requestOT"><div class="form-group"><label for="ot-date">วันที่</label><input type="date" id="ot-date" name="ot_date" required></div><div class="form-group"><label for="ot-time">เวลา</label><input type="time" id="ot-time" name="ot_time" required></div><div class="form-group"><label for="ot-reason">เหตุผล</label><textarea id="ot-reason" name="ot_reason" required></textarea></div><div class="form-group"><label for="ot-file">แนบไฟล์</label><input type="file" id="ot-file" name="ot_file"></div></form>`,
-            leaveForm: `<form data-formtype="requestLeave"><div class="form-group"><label for="leave-type">ประเภทการลา</label><select id="leave-type" name="leave_type" required><option value="">-- เลือก --</option><option value="ลากิจ">ลากิจ</option><option value="ลาป่วย">ลาป่วย</option><option value="ลาพักร้อน">ลาพักร้อน</option></select></div><div class="form-group"><label for="leave-date">วันที่</label><input type="date" id="leave-date" name="leave_date" required></div><div class="form-group"><label for="leave-reason">เหตุผล</label><textarea id="leave-reason" name="leave_reason" required></textarea></div><div id="leave-file-wrapper" class="form-group file-input-wrapper"><label for="leave-file">แนบใบรับรองแพทย์</label><input type="file" id="leave-file" name="leave_file"></div></form>`,
-            holidayList: `<p>วันหยุดประจำปี 2568</p><ul><li>1 ม.ค. - วันขึ้นปีใหม่</li><li>10 ก.พ. - วันมาฆบูชา</li><li>6 เม.ย. - วันจักรี</li><li>13-15 เม.ย. - วันสงกรานต์</li></ul>`,
-            formActions: `<button class="modal-btn btn-secondary modal-btn-close">ยกเลิก</button><button type="submit" form="modal-body > form" class="modal-btn btn-primary">ยื่นเรื่อง</button>`,
-            closeAction: `<button class="modal-btn btn-primary modal-btn-close">ปิด</button>`
-        };
+        // Check in/out handlers
+        checkInBtn.addEventListener('click', async function() {
+            if (checkInStatus) return;
+            await recordAttendance('เข้างาน');
+        });
 
-        function init() {
-            updateClock();
-            setInterval(updateClock, 1000);
-            elements.loginForm.addEventListener('submit', handleLogin);
-            elements.logoutBtn.addEventListener('click', handleLogout);
-            elements.checkinBtn.addEventListener('click', handleCheckInToggle);
-            document.getElementById('ot-btn').addEventListener('click', () => openModal('ขอทำโอที', MODAL_CONTENT.otForm, MODAL_CONTENT.formActions));
-            document.getElementById('leave-btn').addEventListener('click', () => openModal('ขอลา', MODAL_CONTENT.leaveForm, MODAL_CONTENT.formActions));
-            document.getElementById('holiday-btn').addEventListener('click', () => openModal('วันหยุดบริษัท', MODAL_CONTENT.holidayList, MODAL_CONTENT.closeAction));
-            elements.modalOverlay.addEventListener('click', (e) => { if (e.target === elements.modalOverlay) closeModal(); });
-            lucide.createIcons();
+        checkOutBtn.addEventListener('click', async function() {
+            if (!checkInStatus) return;
+            await recordAttendance('ออกงาน');
+        });
+
+        // Record attendance
+        async function recordAttendance(action) {
+            try {
+                const locationStr = userLocation ? 
+                    `${userLocation.latitude.toFixed(6)}, ${userLocation.longitude.toFixed(6)}` : 
+                    'ไม่สามารถระบุตำแหน่งได้';
+
+                const data = {
+                    action: 'recordAttendance',
+                    userName: currentUser.name,
+                    attendanceAction: action,
+                    location: locationStr
+                };
+
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(data)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    checkInStatus = action === 'เข้างาน';
+                    updateStatusDisplay();
+                    showAlert('mainAlert', `บันทึก${action}เรียบร้อยแล้ว`, 'success');
+                } else {
+                    showAlert('mainAlert', 'เกิดข้อผิดพลาดในการบันทึก', 'danger');
+                }
+            } catch (error) {
+                showAlert('mainAlert', 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'danger');
+            }
         }
-        
-        init();
-    });
+
+        // Modal handlers
+        otRequestBtn.addEventListener('click', function() {
+            otModal.style.display = 'block';
+        });
+
+        leaveRequestBtn.addEventListener('click', function() {
+            leaveModal.style.display = 'block';
+        });
+
+        document.getElementById('closeOtModal').addEventListener('click', function() {
+            otModal.style.display = 'none';
+        });
+
+        document.getElementById('closeLeaveModal').addEventListener('click', function() {
+            leaveModal.style.display = 'none';
+        });
+
+        // Close modals when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === otModal) {
+                otModal.style.display = 'none';
+            }
+            if (event.target === leaveModal) {
+                leaveModal.style.display = 'none';
+            }
+        });
+
+        // OT request form handler
+        otForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                const data = {
+                    action: 'submitOTRequest',
+                    userName: currentUser.name,
+                    date: document.getElementById('otDate').value,
+                    time: document.getElementById('otTime').value,
+                    reason: document.getElementById('otReason').value
+                };
+
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(data)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    otModal.style.display = 'none';
+                    otForm.reset();
+                    document.getElementById('otDate').valueAsDate = new Date();
+                    showAlert('mainAlert', 'ส่งคำขอทำโอทีเรียบร้อยแล้ว', 'success');
+                } else {
+                    showAlert('mainAlert', 'เกิดข้อผิดพลาดในการส่งคำขอ', 'danger');
+                }
+            } catch (error) {
+                showAlert('mainAlert', 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'danger');
+            }
+        });
+
+        // Leave request form handler
+        leaveForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                const data = {
+                    action: 'submitLeaveRequest',
+                    userName: currentUser.name,
+                    leaveType: document.getElementById('leaveType').value,
+                    date: document.getElementById('leaveDate').value,
+                    reason: document.getElementById('leaveReason').value
+                };
+
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(data)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    leaveModal.style.display = 'none';
+                    leaveForm.reset();
+                    document.getElementById('leaveDate').valueAsDate = new Date();
+                    showAlert('mainAlert', 'ส่งคำขอลาเรียบร้อยแล้ว', 'success');
+                } else {
+                    showAlert('mainAlert', 'เกิดข้อผิดพลาดในการส่งคำขอ', 'danger');
+                }
+            } catch (error) {
+                showAlert('mainAlert', 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'danger');
+            }
+        });
+
+        // Logout handler
+        logoutBtn.addEventListener('click', function() {
+            currentUser = null;
+            checkInStatus = false;
+            mainScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+            employeeIdInput.value = '';
+            document.getElementById('loginAlert').innerHTML = '';
+            document.getElementById('mainAlert').innerHTML = '';
+        });
     </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'987c38bd83b89d24',t:'MTc1OTMyNDQ1MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
-
-
